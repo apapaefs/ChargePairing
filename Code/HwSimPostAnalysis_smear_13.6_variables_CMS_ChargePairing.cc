@@ -175,8 +175,8 @@ double cut_pt_bjet4(40.0); //pt cut for b-jets
 
 
 /* RECO Higgs CUTS */ 
-double cut_pt_higgs1(100); //minimum pt for reco higgs 1
-double cut_pt_higgs2(100); //minimum pt for reco higgs 2
+double cut_pt_higgs1(80); //minimum pt for reco higgs 1
+double cut_pt_higgs2(80); //minimum pt for reco higgs 2
 double cut_pt_higgs3(20.0); //minimum pt for reco higgs 3
 double cut_chisq_min(60.); //maximum of the minimum (best) chi-squared
 double cut_DeltaM_min(40); //maximum DeltaM_min
@@ -184,6 +184,11 @@ double cut_DeltaM_med(50); //maximum DeltaM_med
 double cut_DeltaM_max(60); //maximum DeltaM_max
 double cut_dR_higgses(3.5); //maximum delta R beteween reco Higgses
 double cut_dR_hbbreco(3.5); //maximum delta R between b-jets in a reco Higgs
+
+// The b-jet charge identification probability, i.e. the probability to CORRECTLY identif the charge of a b-jet:
+double Pb_charge(1.0);
+// whether to consider or ignore the b-jet charge
+bool consider_charge(true); 
 
 bool perfect_tagging = true;
 
@@ -505,6 +510,12 @@ int main(int argc, char *argv[]) {
   TopHist h_pT_dRhh(60,output,"delta R between Higgs bosons",0, 3.14153);
   TopHist h_m6b(100,output,"6b invariant mass",0, 1000);
 
+  TopHist h_numbjets(12,output,"number of bJets",-2, 10);
+
+  
+  TopHist h_chargesum(12,output,"6 highest-pT b-Jet charge sum (absolute value)",-2, 10);
+
+  
   /*
    *
    * LOOP OVER EVENTS
@@ -640,6 +651,8 @@ int main(int argc, char *argv[]) {
      numPositrons = Positrons.size();
      numMuons = Muons.size();
      numantiMuons = AntiMuons.size();
+
+     h_numbjets.thfill(numbJets);
      
      int numLeptons = numElectrons + numPositrons + numMuons + numantiMuons;
 
@@ -714,6 +727,31 @@ int main(int argc, char *argv[]) {
        passed_all_cuts = false;
      }
 
+     /* At this point:
+      * we are only considering events with at least 6 SINGLY b-tagged jets 
+      * Note that: there will be events with 4/2 SINGLY b-tagged jets and 1/2 DOUBLY-CHARGED B-JETS, RESPECTIVELY
+      * count each combination: all 6 b-jets identified with the same charge, then 5-1, 4-2, 3-3
+      * THEN, FOR THE CASE OF THE 6 SINGLY b-tagged jets:
+      * - 6-0: if all are identified as the same charge, perform the same analysis as before
+      * - 5-1/4-2/3-3: allow combinations only of the one with opposite charge only in finding the best combination
+      */
+     int charge_sum(0);
+
+     /* RANDOMLY CHANGE THE CHARGE OF A B-JET WITH A PROBABILITY 1-Pb_charge */
+     for(int bc=0; bc < 6; bc++) {
+       if(rnd.Rndm() > Pb_charge) {
+	 bJets[bc].set_user_index( -1*bJets[bc].user_index() ); 
+       }
+     }
+     
+     for(int bc=0; bc < 6; bc++) {
+       charge_sum += bJets[bc].user_index();
+     }
+     // we don't care if positive or negative, so just take the absolute value
+     charge_sum = abs(charge_sum);
+     h_chargesum.thfill(charge_sum,evweight);
+     
+
      //loop over the 15 possible pairings of the 6 b-jets and calculate invariant mass for each "higgs boson candiate"
      double chisq_min(1E99);
      int mincombo(-1);
@@ -723,6 +761,26 @@ int main(int argc, char *argv[]) {
        fastjet::PseudoJet bb1;
        fastjet::PseudoJet bb2;
        fastjet::PseudoJet bb3;
+       if(consider_charge) { 
+	 /* check whether the current charge combination should be considered or not 
+	    in the minimization of the chisq variable. skip if not compatible with charge
+	    if all the jets are identified to have the same charge or we have the 5/1 case, 
+	    we just associate them randomly as before.
+	    The real difference coems in when we have 4/2 or 3/3 and then we want to avoid having combos
+	    of same-charge b-jets. 
+	 */
+	 //first calculate the charges of each combination: 
+	 int charge_combo[3]= {bJets[pairs_of_six[pp][0]].user_index() + bJets[pairs_of_six[pp][1]].user_index(),bJets[pairs_of_six[pp][2]].user_index() + bJets[pairs_of_six[pp][3]].user_index(), bJets[pairs_of_six[pp][4]].user_index() + bJets[pairs_of_six[pp][5]].user_index()};
+	 if(charge_sum == 2) { // charge_sum == 2, i.e. 4/2 case 
+	   //two out of three combos should be of opposite charge and one can be same charge:
+	   if( abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) != 2) continue;
+	 } else if(charge_sum == 0) { //charge_sum == 0, i.e. the 3/3 case
+	   /*ALL combos should be opposite charge:
+	     If ANY combination does not satisfy this, then continue to another combo
+	   */
+	   if( charge_combo[0] != 0 || charge_combo[1] != 0 || charge_combo[2] != 0) continue; 
+	 }
+       }
        bb1 = bJets[pairs_of_six[pp][0]] + bJets[pairs_of_six[pp][1]]; 
        bb2 = bJets[pairs_of_six[pp][2]] + bJets[pairs_of_six[pp][3]];
        bb3 = bJets[pairs_of_six[pp][4]] + bJets[pairs_of_six[pp][5]];
@@ -911,6 +969,8 @@ int main(int argc, char *argv[]) {
   h_pT_h3.add(output,1,0);
   h_pT_dRhh.add(output,1,0);
   h_m6b.add(output,1,0);
+  h_chargesum.add(output,1,0);
+  h_numbjets.add(output,1,0);
   
   cout << "------------------" << endl;
   cout << "total weight in =\t\t\t\t\t\t" <<  total_weight_in << endl;
