@@ -766,20 +766,17 @@ int main(int argc, char *argv[]) {
 	    in the minimization of the chisq variable. skip if not compatible with charge
 	    if all the jets are identified to have the same charge or we have the 5/1 case, 
 	    we just associate them randomly as before.
-	    The real difference coems in when we have 4/2 or 3/3 and then we want to avoid having combos
+	    The real difference comes in when we have 4/2 or 3/3 and then we want to avoid having combos
 	    of same-charge b-jets. 
 	 */
 	 //first calculate the charges of each combination: 
 	 int charge_combo[3]= {bJets[pairs_of_six[pp][0]].user_index() + bJets[pairs_of_six[pp][1]].user_index(),bJets[pairs_of_six[pp][2]].user_index() + bJets[pairs_of_six[pp][3]].user_index(), bJets[pairs_of_six[pp][4]].user_index() + bJets[pairs_of_six[pp][5]].user_index()};
-	 if(charge_sum == 2) { // charge_sum == 2, i.e. 4/2 case 
-	   //two out of three combos should be of opposite charge and one can be same charge:
-	   if( abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) != 2) continue;
-	 } else if(charge_sum == 0) { //charge_sum == 0, i.e. the 3/3 case
-	   /*ALL combos should be opposite charge:
-	     If ANY combination does not satisfy this, then continue to another combo
-	   */
-	   if( charge_combo[0] != 0 || charge_combo[1] != 0 || charge_combo[2] != 0) continue; 
-	 }
+	 /* then ensure that the sum of the absolute values is minimized: 
+	    for +++--- (3/3) this should be zero
+	    for 4/2 this should be 2
+	    for 5/1 this should be 4
+	 */
+	 if( abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) != charge_sum) continue;
        }
        bb1 = bJets[pairs_of_six[pp][0]] + bJets[pairs_of_six[pp][1]]; 
        bb2 = bJets[pairs_of_six[pp][2]] + bJets[pairs_of_six[pp][3]];
