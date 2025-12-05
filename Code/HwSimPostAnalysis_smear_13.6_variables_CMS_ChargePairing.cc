@@ -96,9 +96,10 @@ void generatePairings(int* items, int itemcount, int start);
 //check if integer is in vector of integers
 bool is_in(int a, vector<int> intvec);
 
-
+// ATLAS-style smearer 
 fastjet::PseudoJet smearer_j_ATLAS_Benj(double E, double pt, double pz, double phi, double eta);
 
+// CMS-style smearer
 fastjet::PseudoJet smearer_j_CMS_Benj(double E, double pt, double pz, double phi, double eta);
 
 template <typename T>
@@ -161,7 +162,7 @@ double passed_lepton_cuts(0.);
  
 /* JET CUTS */
 
-double cut_pt_jet(25.0); //pt cut for jets
+double cut_pt_jet(20.0); //pt cut for jets
 double cut_eta_jet(4.0); //pseudo-rapidity cut for jets
 
 /* B-jet CUTS */
@@ -175,20 +176,20 @@ double cut_pt_bjet4(40.0); //pt cut for b-jets
 
 
 /* RECO Higgs CUTS */ 
-double cut_pt_higgs1(80); //minimum pt for reco higgs 1
-double cut_pt_higgs2(80); //minimum pt for reco higgs 2
-double cut_pt_higgs3(20.0); //minimum pt for reco higgs 3
-double cut_chisq_min(60.); //maximum of the minimum (best) chi-squared
-double cut_DeltaM_min(40); //maximum DeltaM_min
-double cut_DeltaM_med(50); //maximum DeltaM_med
+double cut_pt_higgs1(50); //minimum pt for reco higgs 1
+double cut_pt_higgs2(40); //minimum pt for reco higgs 2
+double cut_pt_higgs3(30); //minimum pt for reco higgs 3
+double cut_chisq_min(80.); //maximum of the minimum (best) chi-squared
+double cut_DeltaM_min(20); //maximum DeltaM_min
+double cut_DeltaM_med(40); //maximum DeltaM_med
 double cut_DeltaM_max(60); //maximum DeltaM_max
 double cut_dR_higgses(3.5); //maximum delta R beteween reco Higgses
 double cut_dR_hbbreco(3.5); //maximum delta R between b-jets in a reco Higgs
 
-// The b-jet charge identification probability, i.e. the probability to CORRECTLY identif the charge of a b-jet:
+// The b-jet charge identification probability, i.e. the probability to CORRECTLY identify the charge of a b-jet:
 double Pb_charge(1.0);
 // whether to consider or ignore the b-jet charge
-bool consider_charge(true); 
+int chargetagging(1); 
 
 bool perfect_tagging = true;
 
@@ -376,6 +377,28 @@ int main(int argc, char *argv[]) {
     if(minevents < 1 || minevents > 1E10) { cout << "Error: minevents must be in the range [1,1E10]" << endl; exit(1); } 
   }
 
+  /* 
+   * -pbc: CHANGE THE CHARGE TAGGING PROBABILITY
+   */
+  char * switch_pbc;
+  if(cmdOptionExists(argv, argv+argc, "-pbc")) {
+    switch_pbc = getCmdOption(argv, argv + argc, "-pbc");
+    Pb_charge=(atof(switch_pbc));	       
+    if(atof(switch_pbc) > 1.0 || atof(switch_pbc) < 0.5) { cout << "Charge identification probability has to lie in [0.5, 1.0]" << endl; exit(1); }
+    cout << "B-jet charge identification probability: " << Pb_charge << endl;
+
+  }
+
+  /* 
+   * -chtag: SWITCH CHARGE TAGGING ON AND OFF COMPLETELY: 1 is on, 0 is off
+   */
+  char * switch_chtag;
+  if(cmdOptionExists(argv, argv+argc, "-chtag")) {
+    switch_chtag = getCmdOption(argv, argv + argc, "-chtag");
+    chargetagging=(atoi(switch_chtag));	       
+    if(atoi(switch_chtag) != 1 && atoi(switch_chtag) != 0) { cout << "Choose whether charge tagging is on (1) or off (0)" << endl; exit(1); }
+    cout << "Charge pairing switch: " << chargetagging << endl;
+  }
 
   /* 
    * CREATE THE OUTPUT FILE STRINGS 
@@ -499,11 +522,11 @@ int main(int argc, char *argv[]) {
   TopHist h_pT_b4(60,output,"pT of reco b jet 4",0, 300);
   TopHist h_pT_b5(60,output,"pT of reco b jet 5",0, 300);
   TopHist h_pT_b6(60,output,"pT of reco b jet 6",0, 300);
-  TopHist h_chisq(60,output,"chisq min",0, 300);
+  TopHist h_chisq(60,output,"chisq min",0, 150);
 
-  TopHist h_DeltaM_min(60,output,"Delta M min",0, 300);
-  TopHist h_DeltaM_med(60,output,"Delta M med",0, 300);
-  TopHist h_DeltaM_max(60,output,"Delta M max",0, 300);
+  TopHist h_DeltaM_min(60,output,"Delta M min",0, 150);
+  TopHist h_DeltaM_med(60,output,"Delta M med",0, 150);
+  TopHist h_DeltaM_max(60,output,"Delta M max",0, 150);
   TopHist h_pT_h1(60,output,"pT of Higgs 1",0, 300);
   TopHist h_pT_h2(60,output,"pT of Higgs 2",0, 300);
   TopHist h_pT_h3(60,output,"pT of Higgs 3",0, 300);
@@ -513,7 +536,10 @@ int main(int argc, char *argv[]) {
   TopHist h_numbjets(12,output,"number of bJets",-2, 10);
 
   
-  TopHist h_chargesum(12,output,"6 highest-pT b-Jet charge sum (absolute value)",-2, 10);
+  TopHist h_chargesum_initial(240,output,"6 highest-pT b-Jet INITIAL charge sum (absolute value)",-2, 10);
+  TopHist h_chargesumabs_initial(240,output,"6 highest-pT b-Jet INITIAL charge_sum_abs (sum of absolute values)",-2, 10);
+  TopHist h_chargesum_final(240,output,"6 highest-pT b-Jet FINAL charge sum (absolute value)",-2, 10);
+  TopHist h_chargesumabs_final(240,output,"6 highest-pT b-Jet FINAL charge_sum_abs (sum of absolute values)",-2, 10);
 
   
   /*
@@ -563,7 +589,8 @@ int main(int argc, char *argv[]) {
     }
 
 
-    //if(ii%1 == 0) { cout << "Event number: " << ii << "\r" << flush; }
+    if(ii%10 == 0) { cout << "Event number: " << ii << "\r" << flush; }
+
 
     /*
      * PUSH BACK JETS, LEPTONS & PHOTONS INTO PSEUDOJETS
@@ -582,12 +609,13 @@ int main(int argc, char *argv[]) {
     }
      for(int jj = 0; jj < numbJets; jj++) {
        bjetcan = fastjet::PseudoJet(thebJets[1][jj], thebJets[2][jj], thebJets[3][jj], thebJets[0][jj]);
-       
+       //cout << "thebJets[4][jj] = " << thebJets[4][jj] << endl;
        if(bjetcan.perp() > cut_pt_bjet && fabs(bjetcan.eta()) < cut_eta_bjet && jet_efficiency_accept(bjetcan)) { 
 	 bJets_unsort.push_back(smearer_j_CMS_Benj(bjetcan.e(), bjetcan.perp(), bjetcan.pz(),
                                  bjetcan.phi(), bjetcan.eta()));
 	 //Set the charge
 	 bJets_unsort[bJets_unsort.size()-1].set_user_index(thebJets[4][jj]);
+	 //cout << "bJets_unsort[bJets_unsort.size()-1].user_index() = " << bJets_unsort[bJets_unsort.size()-1].user_index() << endl;
        }
      }
   
@@ -627,7 +655,7 @@ int main(int argc, char *argv[]) {
 	 Leptons_unsort.push_back(smear_lepton(antiMuon, -13));
        }
      }
-     
+
 
      /*
       * SORT RECONSTRUCTED OBJETS BY PT
@@ -718,9 +746,8 @@ int main(int argc, char *argv[]) {
      }
 
 
-     //check that the pT of the b-jets is larger than cut_pt_bjet
-     //also check highest 3 b-jet pts
-     if(bJet1.perp() > cut_pt_bjet1 && bJet2.perp() > cut_pt_bjet2 && bJet3.perp() > cut_pt_bjet3 && bJet4.perp() > cut_pt_bjet4 && bJet5.perp() > cut_pt_bjet3 && bJet6.perp() > cut_pt_bjet3 && passed_all_cuts) {
+     //check that the pT of the b-jets is larger than cut_pt_bjet_1/2/3/4 and 5/6 larger than cut_pt_bjet
+     if(bJet1.perp() > cut_pt_bjet1 && bJet2.perp() > cut_pt_bjet2 && bJet3.perp() > cut_pt_bjet3 && bJet4.perp() > cut_pt_bjet4 && bJet5.perp() > cut_pt_bjet && bJet6.perp() > cut_pt_bjet && passed_all_cuts) {
        pass_ptb+=evweight;
      }
      else {
@@ -736,21 +763,39 @@ int main(int argc, char *argv[]) {
       * - 5-1/4-2/3-3: allow combinations only of the one with opposite charge only in finding the best combination
       */
      int charge_sum(0);
+     int charge_sum_abs(0);
 
+     //get the initial charge sum:
+     for(int bc=0; bc < 6; bc++) {
+       charge_sum += bJets[bc].user_index();
+       charge_sum_abs += abs(bJets[bc].user_index());
+     }
+     charge_sum = abs(charge_sum);
+     h_chargesum_initial.thfill(charge_sum,evweight);
+     h_chargesumabs_initial.thfill(charge_sum_abs,evweight);
+     //for now, only consider events with TRUE charge_sum = 0 and each with charge +-1, i.e. with TRUE +++---
+     if(charge_sum_abs != 6 || charge_sum != 0) { continue; }
+     
      /* RANDOMLY CHANGE THE CHARGE OF A B-JET WITH A PROBABILITY 1-Pb_charge */
      for(int bc=0; bc < 6; bc++) {
        if(rnd.Rndm() > Pb_charge) {
 	 bJets[bc].set_user_index( -1*bJets[bc].user_index() ); 
        }
      }
-     
+     // recalculate charge sum after flips
+     charge_sum = 0;
+     charge_sum_abs = 0;
      for(int bc=0; bc < 6; bc++) {
        charge_sum += bJets[bc].user_index();
+       charge_sum_abs += abs(bJets[bc].user_index());
+
      }
+     //cout << bJets[0].user_index() << "\t" << bJets[1].user_index() << "\t" << bJets[2].user_index() << "\t" << bJets[3].user_index() << "\t" << bJets[4].user_index() << "\t" << bJets[5].user_index() << endl;
      // we don't care if positive or negative, so just take the absolute value
      charge_sum = abs(charge_sum);
-     h_chargesum.thfill(charge_sum,evweight);
-     
+     h_chargesum_final.thfill(charge_sum,evweight);
+     h_chargesumabs_final.thfill(charge_sum_abs,evweight);
+
 
      //loop over the 15 possible pairings of the 6 b-jets and calculate invariant mass for each "higgs boson candiate"
      double chisq_min(1E99);
@@ -761,7 +806,7 @@ int main(int argc, char *argv[]) {
        fastjet::PseudoJet bb1;
        fastjet::PseudoJet bb2;
        fastjet::PseudoJet bb3;
-       if(consider_charge) { 
+       if(chargetagging) { 
 	 /* check whether the current charge combination should be considered or not 
 	    in the minimization of the chisq variable. skip if not compatible with charge
 	    if all the jets are identified to have the same charge or we have the 5/1 case, 
@@ -770,11 +815,11 @@ int main(int argc, char *argv[]) {
 	    of same-charge b-jets. 
 	 */
 	 //first calculate the charges of each combination: 
-	 int charge_combo[3]= {bJets[pairs_of_six[pp][0]].user_index() + bJets[pairs_of_six[pp][1]].user_index(),bJets[pairs_of_six[pp][2]].user_index() + bJets[pairs_of_six[pp][3]].user_index(), bJets[pairs_of_six[pp][4]].user_index() + bJets[pairs_of_six[pp][5]].user_index()};
+	 int charge_combo[3]= {bJets[pairs_of_six[pp][0]].user_index() + bJets[pairs_of_six[pp][1]].user_index(), bJets[pairs_of_six[pp][2]].user_index() + bJets[pairs_of_six[pp][3]].user_index(), bJets[pairs_of_six[pp][4]].user_index() + bJets[pairs_of_six[pp][5]].user_index()};
 	 /* then ensure that the sum of the absolute values is minimized: 
 	    for +++--- (3/3) this should be zero
 	    for 4/2 this should be 2
-	    for 5/1 this should be 4
+	    for 5/1 this should be 4 (this is always the case)
 	 */
 	 if( abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) != charge_sum) continue;
        }
@@ -792,6 +837,7 @@ int main(int argc, char *argv[]) {
        //cout << "\tchisq = " << chisq_combo << endl;
        if(chisq_combo < chisq_min) { mbb.clear(); chisq_min = chisq_combo; mincombo = pp; mbb.push_back(fabs((mbb1-mhiggs1))); mbb.push_back(fabs((mbb2-mhiggs2))); mbb.push_back(fabs((mbb3-mhiggs3))); ph.push_back(bb1); ph.push_back(bb2); ph.push_back(bb3); }
      }
+
      //cout << "min. chi-sq = " << chisq_min << " for combo " << mincombo << endl;
      std::vector<double> DeltaM_unsort; //store the differences of the optimal combination with the Higgs mass in ascending order (DeltaM_min, DeltaM_med, DeltaM_max)
      for(int m = 0; m < 3; m++) { DeltaM_unsort.push_back(mbb[m]); /*cout << "mbb = " << mbb[m] << endl;*/ }
@@ -803,6 +849,7 @@ int main(int argc, char *argv[]) {
      std::generate(std::begin(DeltaM_index), std::end(DeltaM_index), [&]{ return n++; });
      std::sort(  std::begin(DeltaM_index), std::end(DeltaM_index), [&](int i1, int i2) { return DeltaM_unsort[i1] < DeltaM_unsort[i2]; } );
      ph = sorted_by_pt(ph);
+
 
      //impose further cuts:
 
@@ -966,7 +1013,10 @@ int main(int argc, char *argv[]) {
   h_pT_h3.add(output,1,0);
   h_pT_dRhh.add(output,1,0);
   h_m6b.add(output,1,0);
-  h_chargesum.add(output,1,0);
+  h_chargesumabs_initial.add(output,1,0);
+  h_chargesum_initial.add(output,1,0);
+  h_chargesumabs_final.add(output,1,0);
+  h_chargesum_final.add(output,1,0);
   h_numbjets.add(output,1,0);
   
   cout << "------------------" << endl;
@@ -976,7 +1026,7 @@ int main(int argc, char *argv[]) {
   cout << "cuts/counters:" << endl;
   cout << "6bs:\t\t\t\t\t\t\t\t" <<  pass_6b << endl;
   cout << "6bs with dR(b,b) > " << cut_dRbbmin << "\t\t\t\t\t\t" << pass_drbb << endl;
-  cout << "6bs with pT > [" << cut_pt_bjet1 << ", " << cut_pt_bjet2 << ", " << cut_pt_bjet3 << ", " << cut_pt_bjet << ", " << cut_pt_bjet << ", " << cut_pt_bjet <<  "]\t\t\t" << pass_ptb << endl;
+  cout << "6bs with pT > [" << cut_pt_bjet1 << ", " << cut_pt_bjet2 << ", " << cut_pt_bjet3 << ", " << cut_pt_bjet4 << ", " << cut_pt_bjet << ", " << cut_pt_bjet <<  "]\t\t\t" << pass_ptb << endl;
   cout << "chisq minimum < " << cut_chisq_min << "\t\t\t\t\t\t" << pass_chisq << endl;
   cout << "DeltaM(min,med,max) < [" << cut_DeltaM_min << ", " << cut_DeltaM_med << ", " << cut_DeltaM_max << "]\t\t\t\t\t" << pass_DeltaM << endl;
   cout << "Three reco Higgses with pT > [" << cut_pt_higgs1 << ", " << cut_pt_higgs2 << ", " << cut_pt_higgs3 << "]\t\t\t" << pass_pthiggses << endl;
