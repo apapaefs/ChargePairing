@@ -169,22 +169,23 @@ double cut_eta_jet(4.0); //pseudo-rapidity cut for jets
 double cut_pt_bjet(20.0); //pt cut for b-jets
 double cut_eta_bjet(2.5); //pseudo-rapidity cut for b-jets
 double cut_dRbbmin(0.3); //minimum delta R between b-jets
-double cut_pt_bjet1(40.0); //pt cut for b-jets
-double cut_pt_bjet2(40.0); //pt cut for b-jets
+double cut_pt_bjet1(80.0); //pt cut for b-jets
+double cut_pt_bjet2(50.0); //pt cut for b-jets
 double cut_pt_bjet3(40.0); //pt cut for b-jets
 double cut_pt_bjet4(40.0); //pt cut for b-jets
 
 
 /* RECO Higgs CUTS */ 
-double cut_pt_higgs1(50); //minimum pt for reco higgs 1
-double cut_pt_higgs2(40); //minimum pt for reco higgs 2
-double cut_pt_higgs3(30); //minimum pt for reco higgs 3
-double cut_chisq_min(80.); //maximum of the minimum (best) chi-squared
+double cut_pt_higgs1(100); //minimum pt for reco higgs 1
+double cut_pt_higgs2(100); //minimum pt for reco higgs 2
+double cut_pt_higgs3(80); //minimum pt for reco higgs 3
+double cut_chisq_min(50.); //maximum of the minimum (best) chi-squared
 double cut_DeltaM_min(20); //maximum DeltaM_min
-double cut_DeltaM_med(40); //maximum DeltaM_med
-double cut_DeltaM_max(60); //maximum DeltaM_max
+double cut_DeltaM_med(30); //maximum DeltaM_med
+double cut_DeltaM_max(40); //maximum DeltaM_max
 double cut_dR_higgses(3.5); //maximum delta R beteween reco Higgses
 double cut_dR_hbbreco(3.5); //maximum delta R between b-jets in a reco Higgs
+double cut_m6b(350.); //invariant mass of 6 b-jets cut
 
 // The b-jet charge identification probability, i.e. the probability to CORRECTLY identify the charge of a b-jet:
 double Pb_charge(1.0);
@@ -498,7 +499,8 @@ int main(int argc, char *argv[]) {
   double pass_DeltaM(0); //passed delta M cut
   double pass_dRhiggses(0); //passed reco higgses dR cuts
   double pass_dRbbhiggses(0); //passed reco higgses dR(b,b) cuts
-
+  double pass_m6b(0); //passed m6b cut
+  
   double passcuts(0); //passed all cuts
   double eventcount(0); //counting the events (no weights)
   double total_event_in(0); //counting the events in (no weights)
@@ -775,6 +777,7 @@ int main(int argc, char *argv[]) {
      h_chargesumabs_initial.thfill(charge_sum_abs,evweight);
      //for now, only consider events with TRUE charge_sum = 0 and each with charge +-1, i.e. with TRUE +++---
      if(charge_sum_abs != 6 || charge_sum != 0) { continue; }
+     if(abs(bJets[0].user_index()) != 1 || abs(bJets[1].user_index()) !=1 || abs(bJets[2].user_index()) != 1 || abs(bJets[3].user_index()) != 1 || abs(bJets[4].user_index()) != 1 || abs(bJets[5].user_index()) != 1) { continue; }
      
      /* RANDOMLY CHANGE THE CHARGE OF A B-JET WITH A PROBABILITY 1-Pb_charge */
      for(int bc=0; bc < 6; bc++) {
@@ -788,9 +791,8 @@ int main(int argc, char *argv[]) {
      for(int bc=0; bc < 6; bc++) {
        charge_sum += bJets[bc].user_index();
        charge_sum_abs += abs(bJets[bc].user_index());
-
      }
-     //cout << bJets[0].user_index() << "\t" << bJets[1].user_index() << "\t" << bJets[2].user_index() << "\t" << bJets[3].user_index() << "\t" << bJets[4].user_index() << "\t" << bJets[5].user_index() << endl;
+     //cout << bJets[0].user_index() << "\t" << bJets[1].user_index() << "\t" << bJets[2].user_index() << "\t" << bJets[3].user_index() << "\t" << bJets[4].user_index() << "\t" << bJets[5].user_index() << endl << endl;
      // we don't care if positive or negative, so just take the absolute value
      charge_sum = abs(charge_sum);
      h_chargesum_final.thfill(charge_sum,evweight);
@@ -806,7 +808,7 @@ int main(int argc, char *argv[]) {
        fastjet::PseudoJet bb1;
        fastjet::PseudoJet bb2;
        fastjet::PseudoJet bb3;
-       if(chargetagging) { 
+       if(chargetagging) {
 	 /* check whether the current charge combination should be considered or not 
 	    in the minimization of the chisq variable. skip if not compatible with charge
 	    if all the jets are identified to have the same charge or we have the 5/1 case, 
@@ -819,8 +821,9 @@ int main(int argc, char *argv[]) {
 	 /* then ensure that the sum of the absolute values is minimized: 
 	    for +++--- (3/3) this should be zero
 	    for 4/2 this should be 2
-	    for 5/1 this should be 4 (this is always the case)
+	    for 5/1 this should be 4 (this is always the case, so the loop doesn't do anything here)
 	 */
+	 //cout << "abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) = " <<  abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) << " charge_sum = " << charge_sum << endl;
 	 if( abs(charge_combo[0]) + abs(charge_combo[1]) + abs(charge_combo[2]) != charge_sum) continue;
        }
        bb1 = bJets[pairs_of_six[pp][0]] + bJets[pairs_of_six[pp][1]]; 
@@ -853,8 +856,6 @@ int main(int argc, char *argv[]) {
 
      //impose further cuts:
 
-
-
      //chi-sq cut:
      if(chisq_min < cut_chisq_min && passed_all_cuts) {
        pass_chisq+=evweight;
@@ -863,7 +864,6 @@ int main(int argc, char *argv[]) {
        passed_all_cuts = false;
      }
        
-     
      //DeltaM cuts:
      /*cout << "DeltaM:" << endl;
        cout << DeltaM_unsort[DeltaM_index[0]] << "\t" << DeltaM_unsort[DeltaM_index[1]] << "\t" << DeltaM_unsort[DeltaM_index[2]] << endl;*/
@@ -873,7 +873,6 @@ int main(int argc, char *argv[]) {
      else {
        passed_all_cuts = false;
      }
-
      
      //pT of reconstructed Higgs bosons:
      if(ph[0].perp() > cut_pt_higgs1 && ph[1].perp() > cut_pt_higgs2 && ph[2].perp() > cut_pt_higgs3 && passed_all_cuts) {
@@ -890,7 +889,7 @@ int main(int argc, char *argv[]) {
        passed_all_cuts = false;
      }
 
-          //delta R between Higgs bosons:
+     //delta R between Higgs bosons:
      if(deltaR(ph[0], ph[1]) < cut_dR_higgses && deltaR(ph[0], ph[2]) < cut_dR_higgses && deltaR(ph[1], ph[2]) < cut_dR_higgses && passed_all_cuts) {
        pass_dRhiggses+=evweight;
      }
@@ -898,10 +897,14 @@ int main(int argc, char *argv[]) {
        passed_all_cuts = false;
      }
 
-
-
-
-
+     double m6b = (bJets[0]+bJets[1]+bJets[2]+bJets[3]+bJets[4]+bJets[5]).m();
+     if(m6b > cut_m6b && passed_all_cuts) {
+       pass_m6b+=evweight;
+     }
+     else {
+       passed_all_cuts = false;
+     }
+     
      /*
      * DOES THE EVENT PASS ALL THE CUTS?
      * IF SO INCREMENT THE WEIGHT
@@ -911,13 +914,11 @@ int main(int argc, char *argv[]) {
        eventcount++;
      }
 
-
-     
-     
      /* 
       * calculate variables for the _var.root file and plot:
       */
-     double m6b = (bJets[0]+bJets[1]+bJets[2]+bJets[3]+bJets[4]+bJets[5]).m();
+
+     
      
      /*
       * Fill in the _var.root file for further analysis.
@@ -1026,12 +1027,13 @@ int main(int argc, char *argv[]) {
   cout << "cuts/counters:" << endl;
   cout << "6bs:\t\t\t\t\t\t\t\t" <<  pass_6b << endl;
   cout << "6bs with dR(b,b) > " << cut_dRbbmin << "\t\t\t\t\t\t" << pass_drbb << endl;
-  cout << "6bs with pT > [" << cut_pt_bjet1 << ", " << cut_pt_bjet2 << ", " << cut_pt_bjet3 << ", " << cut_pt_bjet4 << ", " << cut_pt_bjet << ", " << cut_pt_bjet <<  "]\t\t\t" << pass_ptb << endl;
+  cout << "6bs with pT > [" << cut_pt_bjet1 << ", " << cut_pt_bjet2 << ", " << cut_pt_bjet3 << ", " << cut_pt_bjet4 << ", " << cut_pt_bjet << ", " << cut_pt_bjet <<  "]\t\t\t\t" << pass_ptb << endl;
   cout << "chisq minimum < " << cut_chisq_min << "\t\t\t\t\t\t" << pass_chisq << endl;
-  cout << "DeltaM(min,med,max) < [" << cut_DeltaM_min << ", " << cut_DeltaM_med << ", " << cut_DeltaM_max << "]\t\t\t\t\t" << pass_DeltaM << endl;
+  cout << "DeltaM(min,med,max) < [" << cut_DeltaM_min << ", " << cut_DeltaM_med << ", " << cut_DeltaM_max << "]\t\t\t\t" << pass_DeltaM << endl;
   cout << "Three reco Higgses with pT > [" << cut_pt_higgs1 << ", " << cut_pt_higgs2 << ", " << cut_pt_higgs3 << "]\t\t\t" << pass_pthiggses << endl;
   cout << "DeltaR(b,b) in reco Higgses < " << cut_dR_hbbreco << "\t\t\t\t" << pass_dRbbhiggses << endl;
   cout << "dR between reco Higgses < " << cut_dR_higgses << "\t\t\t\t\t" << pass_dRhiggses << endl;
+  cout << "m6b > " << cut_m6b << "\t\t\t\t\t\t\t" << pass_m6b << endl;
   cout << "------------------" << endl;
   cout << "total weight out =\t\t\t\t\t\t" <<  passcuts << endl;
   cout << "actual MC events = \t\t\t\t\t\t" << eventcount << endl;
