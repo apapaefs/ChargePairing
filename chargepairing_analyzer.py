@@ -64,9 +64,9 @@ DoTraining = False
 # choose the model - HEFT2/HEFT3 or C3-D4 model only 
 #MODEL = 'HEFT2' # HEFT2 or C3D4ONLY or HEFT3
 #MODEL = 'HEFT3'
-#MODEL = 'C3D4ONLY'
+MODEL = 'C3D4ONLY'
 #MODEL = 'HEFT4'
-MODEL = 'HEFT6'
+#MODEL = 'HEFT6'
 #MODEL = 'HEFT4C3D4'
 print('MODEL=', MODEL)
 
@@ -143,7 +143,11 @@ constraints[100][0] = 5/100
 constraints[100][1] = 0.1
 constraints[100][2] = -1
 constraints[100][3] = -1
-
+constraints[13.6] = {}
+constraints[13.6][0] = 50/100
+constraints[13.6][1] = -1
+constraints[13.6][2] = -1
+constraints[13.6][3] = -1
 
 # Input file templates for LO, MC@NLO and FxFx:
 # the real files have a .in.template extension
@@ -200,7 +204,7 @@ popt = {}
 pcov = {}
 
 # Directory for the pickle results
-ResultsDir = '/mnt/hdd/Projects/GlobalHHH100/PickleResults/'
+ResultsDir = '/mnt/hdd/Projects/ChargePairing/PickleResults/'
 
 # Constraints directory
 ConstraintsDir = 'Constraints/'
