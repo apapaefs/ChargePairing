@@ -29,6 +29,7 @@ Backgrounds/events/HW-all_events_6b_13.6_new1.root
 ```
 
 each has 100k events. The corresponding MG5 total cross sections, cross sections after $h \to b\bar{b}$ (=0.5824) and b-tagging with $p=0.85$, and total number of events at 3/ab are:
-MG5 XSEC [fb]	| XSEC * BR * BTAG * KFACS	| Nevents, 3000/fb
-4.07E-02	| 6.07E-03	| 18.20
-1.06E+03	| 7.98E+02	| 2.39E+06
+
+| MG5 XSEC [fb]	| XSEC * BR * BTAG * KFACS	| Nevents, 3000/fb |
+| 4.07E-02	| 6.07E-03	| 18.20 | 
+| 1.06E+03	| 7.98E+02	| 2.39E+06 |
