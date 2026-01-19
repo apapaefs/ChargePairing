@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 # const vector<int> pt_bins = {20, 30, 40, 50, 60, 70, 80, 90, 100,
 #                                         120, 140, 160, 180, 200,
 #                                         250, 300, 400, 600, 1000};
-#    const vector<double> abs_eta_bins = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5};
+# const vector<double> abs_eta_bins = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5};
 # see: https://github.com/jiashu-huang/belphes/blob/master/belphes-examples/btagscore_analysis/PlotHistogram.cpp
 # The naming convention of each histogram in the .root file is
-#hist_eta[X]_pt[Y]
+# hist_eta[X]_pt[Y]
 # where X and Y indicate the n-th number of bins.
 
 # function to read the btagscore histograms from a ROOT file
@@ -94,7 +94,7 @@ def plot_all_histograms(btagscore_histograms, b_or_nonb='B'):
 file_path_B = "JetBtagDeepFlavB_B_Distributions.root"
 JetBtagDeepFlavB_B_Distributions = read_btagscore_histograms(file_path_B)
 # non-B jets
-file_path_NonB = "JetBtagDeepFlavB_B_Distributions.root"
+file_path_NonB = "JetBtagDeepFlavB_NonB_Distributions.root"
 JetBtagDeepFlavB_NonB_Distributions = read_btagscore_histograms(file_path_NonB)
 
 # plot all histograms:
