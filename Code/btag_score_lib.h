@@ -7,7 +7,7 @@
 #include <numeric>
 
 
-double sample_btagscore(
+inline double sample_btagscore(
     const std::vector<double>& bin_edges,
     const std::vector<double>& bin_contents,
     TRandom3& rng
@@ -38,7 +38,7 @@ double sample_btagscore(
 
 
 
-std::map<
+inline std::map<
     std::pair<int, int>,
     std::pair<std::vector<double>, std::vector<double>>
 > read_btagscore_histograms(const std::string& filePath){
@@ -96,7 +96,7 @@ std::map<
 
 //function that returns the btagscore for given pt and abs(eta) of a jet:
 //
-double jet_btagscore(double jet_pt, double jet_abs_eta, std::map<std::pair<int, int>,
+inline double jet_btagscore(double jet_pt, double jet_abs_eta, std::map<std::pair<int, int>,
                                                        std::pair<std::vector<double>, 
 						       std::vector<double>>
                                                        >		
@@ -148,7 +148,7 @@ double jet_btagscore(double jet_pt, double jet_abs_eta, std::map<std::pair<int, 
 }
 
 
-int main(){
+/*int main(){
 	  std::cout << "Hello, world!" << std::endl;
 
 	  std::string filePath_NonB = "../btagscore/JetBtagDeepFlavB_NonB_Distributions.root";
@@ -180,3 +180,4 @@ int main(){
 
     }
 
+*/
